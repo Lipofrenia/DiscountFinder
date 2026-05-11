@@ -26,49 +26,44 @@ logger = logging.getLogger(__name__)
 _MOCK_WB = [
     SearchResult(
         title="Кроссовки Nike Air Max 270 мужские",
-        current_price=4_290.0,
-        old_price=7_999.0,
+        current_price=4_290.0, old_price=7_999.0,
         url="https://www.wildberries.ru/catalog/12345678/detail.aspx",
         image_url="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-        marketplace_name="WB",
+        marketplace_name="WB", rating=4.7, reviews_count=2341,
     ),
     SearchResult(
         title="Рюкзак городской Nike Heritage",
-        current_price=2_150.0,
-        old_price=3_200.0,
+        current_price=2_150.0, old_price=3_200.0,
         url="https://www.wildberries.ru/catalog/87654321/detail.aspx",
         image_url="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400",
-        marketplace_name="WB",
+        marketplace_name="WB", rating=4.3, reviews_count=887,
     ),
 ]
 
 _MOCK_OZON = [
     SearchResult(
-        title='Смарт-часы Xiaomi Band 8 Pro',
-        current_price=5_990.0,
-        old_price=8_499.0,
+        title="Смарт-часы Xiaomi Band 8 Pro",
+        current_price=5_990.0, old_price=8_499.0,
         url="https://www.ozon.ru/product/smartband-xiaomi-band-8-pro/",
         image_url="https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=400",
-        marketplace_name="Ozon",
+        marketplace_name="Ozon", rating=4.8, reviews_count=5102,
     ),
     SearchResult(
         title="Наушники TWS Baseus Storm2",
-        current_price=1_890.0,
-        old_price=2_990.0,
+        current_price=1_890.0, old_price=2_990.0,
         url="https://www.ozon.ru/product/naushniki-baseus-storm2/",
         image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
-        marketplace_name="Ozon",
+        marketplace_name="Ozon", rating=4.1, reviews_count=312,
     ),
 ]
 
 _MOCK_YA = [
     SearchResult(
         title="Механическая клавиатура Keychron K2 Pro",
-        current_price=9_450.0,
-        old_price=12_990.0,
+        current_price=9_450.0, old_price=12_990.0,
         url="https://market.yandex.ru/product--keychron-k2-pro/",
         image_url="https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400",
-        marketplace_name="Ya",
+        marketplace_name="Ya", rating=4.5, reviews_count=198,
     ),
 ]
 

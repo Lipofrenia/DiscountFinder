@@ -1,10 +1,7 @@
 """
 auth.py — утилиты JWT и хэширования паролей.
 
-Используем sha256_crypt вместо bcrypt:
-  - нет ограничения длины пароля в 72 байта
-  - нет конфликтов версий с bcrypt 4.x
-  - встроен в passlib без дополнительных зависимостей
+Используем sha256_crypt
 """
 
 from datetime import datetime, timedelta

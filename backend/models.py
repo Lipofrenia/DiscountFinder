@@ -38,6 +38,8 @@ class Product(Base):
     old_price: Mapped[float] = mapped_column(Float, nullable=True)
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     image_url: Mapped[str] = mapped_column(String(1000), nullable=True)
+    rating: Mapped[float] = mapped_column(Float, nullable=True)          # 0.0–5.0
+    reviews_count: Mapped[int] = mapped_column(Integer, nullable=True)   # кол-во отзывов
     # WB / Ozon / Ya
     marketplace_name: Mapped[str] = mapped_column(String(50), nullable=False, default="WB")
     last_updated: Mapped[datetime] = mapped_column(

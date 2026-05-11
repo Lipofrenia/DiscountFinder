@@ -110,110 +110,173 @@ def make_button(text: str, on_click, primary: bool = True, icon=None) -> ft.Elev
             padding=ft.padding.symmetric(horizontal=24, vertical=14),
         ),
     )
+def star_row(rating: float, reviews: int) -> ft.Row:
+    """Строка со звёздами и кол-вом отзывов."""
+    stars = []
+    for i in range(1, 6):
+        color = GOLD if rating >= (i - 0.25) else ("#88F59E0B" if rating >= (i - 0.75) else BORDER_COLOR)
+        stars.append(ft.Icon(ft.icons.STAR, color=color, size=13))
+    return ft.Row(
+        spacing=2,
+        controls=[
+            *stars,
+            ft.Text(f"{rating:.1f}  ({reviews:,})".replace(",", " "),
+                    color=TEXT_SECONDARY, size=11),
+        ],
+    )
 
 
-def product_card(item: dict, on_favorite, token: str) -> ft.Container:
-    """
-    Карточка товара: изображение, название, цена, кнопка «В избранное».
-    """
+def product_card(item: dict, on_favorite, on_cancel, page: ft.Page) -> ft.Container:
+    """Карточка товара: изображение, название, цена, кнопки действий."""
     pct = discount_pct(item["current_price"], item.get("old_price", 0))
     has_discount = pct > 0
+    marketplace_colors = {"WB": "#CB11AB", "Ozon": "#005BFF", "Ya": "#FFCC00"}
+    mp_color = marketplace_colors.get(item.get("marketplace_name", "WB"), ACCENT)
+    rating_widget = star_row(item["rating"], item.get("reviews_count") or 0) if item.get("rating") else None
 
+    # ── Кнопка «В избранное» (полная ширина, меняет состояние) ──
+    fav_btn = ft.ElevatedButton(
+        text="В избранное", icon=ft.icons.STAR_OUTLINE,
+        expand=True,
+        style=ft.ButtonStyle(
+            bgcolor="#1FF59E0B", color=GOLD, overlay_color="#33F59E0B",
+            shape=ft.RoundedRectangleBorder(radius=8),
+            padding=ft.padding.symmetric(horizontal=8, vertical=6),
+        ),
+    )
+    # Иконка «Отменить» — появляется после добавления
+    cancel_btn = ft.IconButton(
+        icon=ft.icons.UNDO, icon_color=RED, tooltip="Отменить добавление",
+        visible=False, icon_size=18,
+    )
+    # Иконка «Открыть на сайте»
+    open_btn = ft.IconButton(
+        icon=ft.icons.OPEN_IN_NEW, icon_color=TEXT_SECONDARY,
+        tooltip="Открыть на сайте", icon_size=18,
+        on_click=lambda e: page.launch_url(item["url"]),
+    )
+
+    saved_id: dict = {"value": None}
+
+    def handle_fav(e):
+        result = on_favorite(item)
+        if result:
+            fav_btn.text = "В избранном ✓"
+            fav_btn.icon = ft.icons.STAR
+            fav_btn.disabled = True
+            fav_btn.style = ft.ButtonStyle(
+                bgcolor="#1F22C55E", color=GREEN,
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+            )
+            if isinstance(result, dict):
+                saved_id["value"] = result.get("id")
+                cancel_btn.visible = True
+            page.update()
+
+    def handle_cancel(e):
+        if saved_id["value"] and on_cancel:
+            on_cancel(saved_id["value"])
+        fav_btn.text = "В избранное"
+        fav_btn.icon = ft.icons.STAR_OUTLINE
+        fav_btn.disabled = False
+        fav_btn.style = ft.ButtonStyle(
+            bgcolor="#1FF59E0B", color=GOLD, overlay_color="#33F59E0B",
+            shape=ft.RoundedRectangleBorder(radius=8),
+            padding=ft.padding.symmetric(horizontal=8, vertical=6),
+        )
+        cancel_btn.visible = False
+        saved_id["value"] = None
+        page.update()
+
+    fav_btn.on_click = handle_fav
+    cancel_btn.on_click = handle_cancel
+
+    # ── Строка цены ──
     price_row_controls = [
         ft.Text(
             f"₽ {item['current_price']:,.0f}".replace(",", " "),
             color=GREEN if has_discount else TEXT_PRIMARY,
-            size=18,
-            weight=ft.FontWeight.BOLD,
+            size=16, weight=ft.FontWeight.BOLD,
         ),
     ]
     if has_discount:
         price_row_controls += [
             ft.Text(
                 f"₽ {item['old_price']:,.0f}".replace(",", " "),
-                color=TEXT_SECONDARY,
-                size=13,
+                color=TEXT_SECONDARY, size=11,
                 style=ft.TextStyle(decoration=ft.TextDecoration.LINE_THROUGH),
             ),
             ft.Container(
-                content=ft.Text(f"-{pct}%", color="white", size=11, weight=ft.FontWeight.BOLD),
-                bgcolor=GREEN,
-                border_radius=6,
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                content=ft.Text(f"-{pct}%", color="white", size=10, weight=ft.FontWeight.BOLD),
+                bgcolor=GREEN, border_radius=5,
+                padding=ft.padding.symmetric(horizontal=5, vertical=1),
             ),
         ]
-
-    marketplace_colors = {"WB": "#CB11AB", "Ozon": "#005BFF", "Ya": "#FFCC00"}
-    mp_color = marketplace_colors.get(item.get("marketplace_name", "WB"), ACCENT)
 
     return ft.Container(
         border_radius=14,
         bgcolor=SURFACE_COLOR,
         border=ft.border.all(1, BORDER_COLOR),
         clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT),
         content=ft.Column(
             spacing=0,
+            tight=True,
             controls=[
                 # ── Изображение ──
-                ft.Stack(
-                    controls=[
-                        ft.Image(
-                            src=item.get("image_url") or "https://via.placeholder.com/300x200",
-                            width=300,
-                            height=180,
-                            fit=ft.ImageFit.COVER,
-                            error_content=ft.Container(
-                                bgcolor="#1a1a2e",
-                                content=ft.Icon(ft.icons.IMAGE_NOT_SUPPORTED, color=TEXT_SECONDARY),
-                            ),
-                        ),
-                        # Бейдж площадки
-                        ft.Container(
-                            content=ft.Text(
-                                item.get("marketplace_name", ""),
-                                color="white",
-                                size=11,
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            bgcolor=mp_color,
-                            border_radius=ft.border_radius.only(bottom_right=8),
-                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                            top=0, left=0,
-                        ),
-                    ],
-                ),
-                # ── Контент карточки ──
                 ft.Container(
-                    padding=ft.padding.all(14),
+                    height=145,
+                    content=ft.Stack(
+                        controls=[
+                            ft.Image(
+                                src=item.get("image_url") or "https://via.placeholder.com/300x145",
+                                width=310, height=145,
+                                fit=ft.ImageFit.COVER,
+                                error_content=ft.Container(
+                                    bgcolor="#1a1a2e", width=310, height=145,
+                                    content=ft.Icon(ft.icons.IMAGE_NOT_SUPPORTED, color=TEXT_SECONDARY),
+                                ),
+                            ),
+                            ft.Container(
+                                content=ft.Text(
+                                    item.get("marketplace_name", ""),
+                                    color="white", size=10, weight=ft.FontWeight.BOLD,
+                                ),
+                                bgcolor=mp_color,
+                                border_radius=ft.border_radius.only(bottom_right=7),
+                                padding=ft.padding.symmetric(horizontal=7, vertical=3),
+                                top=0, left=0,
+                            ),
+                        ],
+                    ),
+                ),
+                # ── Контент ──
+                ft.Container(
+                    padding=ft.padding.all(12),
                     content=ft.Column(
-                        spacing=10,
+                        spacing=6, tight=True,
                         controls=[
                             ft.Text(
                                 item["title"],
-                                color=TEXT_PRIMARY,
-                                size=13,
+                                color=TEXT_PRIMARY, size=12,
                                 weight=ft.FontWeight.W_500,
-                                max_lines=2,
-                                overflow=ft.TextOverflow.ELLIPSIS,
+                                max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                             ),
+                            *([ rating_widget ] if rating_widget else []),
                             ft.Row(
                                 controls=price_row_controls,
-                                wrap=True,
-                                spacing=8,
-                                run_spacing=4,
+                                wrap=True, spacing=6, run_spacing=2,
                             ),
-                            ft.ElevatedButton(
-                                text="В избранное",
-                                icon=ft.icons.STAR_OUTLINE,
-                                on_click=lambda e, i=item: on_favorite(i),
-                                style=ft.ButtonStyle(
-                                    bgcolor="#1FF59E0B",  # ~12% opacity gold
-                                    color=GOLD,
-                                    overlay_color="#33F59E0B",  # ~20% opacity gold
-                                    shape=ft.RoundedRectangleBorder(radius=8),
-                                    padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                                ),
+                            # Кнопка «В избранное» — полная ширина
+                            ft.Row(controls=[fav_btn], tight=True),
+                            # Кнопки-иконки: Отменить + Открыть на сайте
+                            ft.Row(
+                                spacing=4,
+                                controls=[
+                                    cancel_btn,
+                                    open_btn,
+                                    ft.Text("На сайте", color=TEXT_SECONDARY, size=11),
+                                ],
                             ),
                         ],
                     ),
@@ -223,60 +286,104 @@ def product_card(item: dict, on_favorite, token: str) -> ft.Container:
     )
 
 
-def favorite_card(item: dict, on_delete) -> ft.Container:
+def favorite_card(item: dict, on_delete, page: ft.Page) -> ft.Container:
     """Карточка товара в разделе «Мой список»."""
     pct = discount_pct(item["current_price"], item.get("old_price") or 0)
     has_discount = pct > 0
+
+    # ── Блок цены ──
+    price_col = ft.Column(
+        spacing=2, tight=True,
+        horizontal_alignment=ft.CrossAxisAlignment.END,
+        controls=[
+            ft.Text(
+                f"₽ {item['current_price']:,.0f}".replace(",", " "),
+                color=GREEN if has_discount else TEXT_PRIMARY,
+                size=18, weight=ft.FontWeight.BOLD,
+            ),
+            *([
+                ft.Row(
+                    spacing=4,
+                    controls=[
+                        ft.Container(
+                            content=ft.Text(f"-{pct}%", color="white",
+                                            size=10, weight=ft.FontWeight.BOLD),
+                            bgcolor=GREEN, border_radius=5,
+                            padding=ft.padding.symmetric(horizontal=5, vertical=1),
+                        ),
+                        ft.Text(
+                            f"₽ {item['old_price']:,.0f}".replace(",", " "),
+                            color=TEXT_SECONDARY, size=11,
+                            style=ft.TextStyle(decoration=ft.TextDecoration.LINE_THROUGH),
+                        ),
+                    ],
+                )
+            ] if has_discount else []),
+        ],
+    )
 
     return ft.Container(
         border_radius=12,
         bgcolor=SURFACE_COLOR,
         border=ft.border.all(1, BORDER_COLOR),
-        padding=ft.padding.all(16),
+        padding=ft.padding.symmetric(horizontal=16, vertical=12),
         content=ft.Row(
-            spacing=16,
+            spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
+                # Фото
                 ft.Image(
-                    src=item.get("image_url") or "https://via.placeholder.com/80",
-                    width=80, height=80,
+                    src=item.get("image_url") or "https://via.placeholder.com/72",
+                    width=72, height=72,
                     fit=ft.ImageFit.COVER,
                     border_radius=8,
                 ),
+                # Инфо: название, рейтинг, площадка
                 ft.Column(
-                    expand=True,
-                    spacing=4,
+                    expand=True, spacing=3, tight=True,
                     controls=[
-                        ft.Text(item["title"], color=TEXT_PRIMARY, size=14,
-                                weight=ft.FontWeight.W_500, max_lines=2,
-                                overflow=ft.TextOverflow.ELLIPSIS),
-                        ft.Row(
-                            spacing=8,
-                            controls=[
-                                ft.Text(
-                                    f"₽ {item['current_price']:,.0f}".replace(",", " "),
-                                    color=GREEN if has_discount else TEXT_PRIMARY,
-                                    size=16, weight=ft.FontWeight.BOLD,
-                                ),
-                                *(
-                                    [ft.Container(
-                                        content=ft.Text(f"-{pct}%", color="white",
-                                                        size=11, weight=ft.FontWeight.BOLD),
-                                        bgcolor=GREEN, border_radius=6,
-                                        padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                                    )]
-                                    if has_discount else []
-                                ),
-                            ],
+                        ft.Text(
+                            item["title"], color=TEXT_PRIMARY, size=13,
+                            weight=ft.FontWeight.W_500, max_lines=2,
+                            overflow=ft.TextOverflow.ELLIPSIS,
                         ),
-                        ft.Text(item.get("marketplace_name", ""), color=TEXT_SECONDARY, size=12),
+                        *([ star_row(item["rating"], item.get("reviews_count") or 0) ]
+                          if item.get("rating") is not None else []),
+                        ft.Container(
+                            content=ft.Text(
+                                item.get("marketplace_name", ""),
+                                color="white", size=10, weight=ft.FontWeight.BOLD,
+                            ),
+                            bgcolor={
+                                "WB": "#CB11AB", "Ozon": "#005BFF", "Ya": "#FFCC00"
+                            }.get(item.get("marketplace_name", ""), ACCENT),
+                            border_radius=4,
+                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                        ),
                     ],
                 ),
-                ft.IconButton(
-                    icon=ft.icons.DELETE_OUTLINE,
-                    icon_color=RED,
-                    tooltip="Удалить",
-                    on_click=lambda e, i=item: on_delete(i),
+                # Цена — выделенная колонка
+                price_col,
+                # Действия: Открыть + Удалить в одну строку
+                ft.Row(
+                    spacing=0,
+                    tight=True,
+                    controls=[
+                        ft.IconButton(
+                            icon=ft.icons.OPEN_IN_NEW,
+                            icon_color=TEXT_SECONDARY,
+                            tooltip="Открыть на сайте",
+                            icon_size=20,
+                            on_click=lambda e, u=item["url"]: page.launch_url(u),
+                        ),
+                        ft.IconButton(
+                            icon=ft.icons.DELETE_OUTLINE,
+                            icon_color=RED,
+                            tooltip="Удалить из списка",
+                            icon_size=20,
+                            on_click=lambda e, i=item: on_delete(i),
+                        ),
+                    ],
                 ),
             ],
         ),
@@ -469,11 +576,10 @@ def main(page: ft.Page):
     )
     results_grid   = ft.GridView(
         expand=True,
-        runs_count=3,
-        max_extent=310,
+        max_extent=300,
         spacing=16,
         run_spacing=16,
-        child_aspect_ratio=0.72,
+        child_aspect_ratio=0.8,
     )
     search_status  = ft.Text("", color=TEXT_SECONDARY, size=14)
     loading_ring   = ft.ProgressRing(color=ACCENT, visible=False)
@@ -509,7 +615,7 @@ def main(page: ft.Page):
             search_status.value = f"Найдено: {len(items)} товаров"
             for item in items:
                 results_grid.controls.append(
-                    product_card(item, add_to_favorites, token_ref["value"])
+                    product_card(item, add_to_favorites, remove_from_search_fav, page)
                 )
         page.update()
 
@@ -517,10 +623,24 @@ def main(page: ft.Page):
         resp = api("POST", "/favorites", token=token_ref["value"], json=item)
         if resp is None:
             show_snack("Нет связи с сервером", error=True)
+            return False
         elif resp.status_code == 201:
-            show_snack(f"«{item['title'][:30]}…» добавлен в избранное")
+            show_snack(f"«{item['title'][:28]}…» добавлен")
+            return safe_json(resp)   # возвращаем dict с id
+        elif resp.status_code == 409:
+            show_snack("Уже в вашем списке")
+            return True   # заблокируем кнопку, но id не знаем
         else:
             show_snack("Не удалось добавить", error=True)
+            return False
+
+    def remove_from_search_fav(product_id: int):
+        """Callback для кнопки «Отменить» в карточке поиска."""
+        resp = api("DELETE", f"/favorites/{product_id}", token=token_ref["value"])
+        if resp and resp.status_code == 204:
+            show_snack("Добавление отменено")
+        else:
+            show_snack("Не удалось отменить", error=True)
 
     search_field.on_submit = do_search
 
@@ -627,7 +747,7 @@ def main(page: ft.Page):
         else:
             fav_status.value = f"Товаров в списке: {len(items)}"
             for item in items:
-                fav_list.controls.append(favorite_card(item, remove_favorite))
+                fav_list.controls.append(favorite_card(item, remove_favorite, page))
         page.update()
 
     def remove_favorite(item: dict):

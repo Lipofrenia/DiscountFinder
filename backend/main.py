@@ -152,7 +152,13 @@ def add_favorite(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Добавить товар в избранное."""
+    """Добавить товар в избранное. 409 если уже добавлен (по URL)."""
+    existing = db.query(models.Product).filter(
+        models.Product.user_id == current_user.id,
+        models.Product.url == body.url,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Товар уже в избранном")
     product = models.Product(**body.model_dump(), user_id=current_user.id)
     db.add(product)
     db.commit()

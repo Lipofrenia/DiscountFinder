@@ -35,6 +35,8 @@ class ProductBase(BaseModel):
     url: str
     image_url: Optional[str] = None
     marketplace_name: str = "WB"
+    rating: Optional[float] = None
+    reviews_count: Optional[int] = None
 
 
 class ProductCreate(ProductBase):
@@ -60,3 +62,5 @@ class SearchResult(BaseModel):
     url: str
     image_url: Optional[str] = None
     marketplace_name: str
+    rating: Optional[float] = None
+    reviews_count: Optional[int] = None
