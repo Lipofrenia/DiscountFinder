@@ -126,7 +126,8 @@ def star_row(rating: float, reviews: int) -> ft.Row:
     )
 
 
-def product_card(item: dict, on_favorite, on_cancel, page: ft.Page) -> ft.Container:
+def product_card(item: dict, on_favorite, on_cancel, page: ft.Page,
+                 already_added: bool = False) -> ft.Container:
     """Карточка товара: изображение, название, цена, кнопки действий."""
     pct = discount_pct(item["current_price"], item.get("old_price", 0))
     has_discount = pct > 0
@@ -135,15 +136,26 @@ def product_card(item: dict, on_favorite, on_cancel, page: ft.Page) -> ft.Contai
     rating_widget = star_row(item["rating"], item.get("reviews_count") or 0) if item.get("rating") else None
 
     # ── Кнопка «В избранное» (полная ширина, меняет состояние) ──
-    fav_btn = ft.ElevatedButton(
-        text="В избранное", icon=ft.icons.STAR_OUTLINE,
-        expand=True,
-        style=ft.ButtonStyle(
-            bgcolor="#1FF59E0B", color=GOLD, overlay_color="#33F59E0B",
-            shape=ft.RoundedRectangleBorder(radius=8),
-            padding=ft.padding.symmetric(horizontal=8, vertical=6),
-        ),
-    )
+    if already_added:
+        fav_btn = ft.ElevatedButton(
+            text="В избранном ✓", icon=ft.icons.STAR,
+            expand=True, disabled=True,
+            style=ft.ButtonStyle(
+                bgcolor="#1F22C55E", color=GREEN,
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+            ),
+        )
+    else:
+        fav_btn = ft.ElevatedButton(
+            text="В избранное", icon=ft.icons.STAR_OUTLINE,
+            expand=True,
+            style=ft.ButtonStyle(
+                bgcolor="#1FF59E0B", color=GOLD, overlay_color="#33F59E0B",
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+            ),
+        )
     # Иконка «Отменить» — появляется после добавления
     cancel_btn = ft.IconButton(
         icon=ft.icons.UNDO, icon_color=RED, tooltip="Отменить добавление",
@@ -612,10 +624,19 @@ def main(page: ft.Page):
         if not items:
             search_status.value = "Ничего не найдено"
         else:
+            # Получаем URL уже добавленных товаров чтобы пометить кнопки
+            fav_urls: set = set()
+            fav_resp = api("GET", "/favorites", token=token_ref["value"])
+            if fav_resp and fav_resp.status_code == 200:
+                for fav in (fav_resp.json() or []):
+                    fav_urls.add(fav.get("url", ""))
+
             search_status.value = f"Найдено: {len(items)} товаров"
             for item in items:
+                already = item.get("url", "") in fav_urls
                 results_grid.controls.append(
-                    product_card(item, add_to_favorites, remove_from_search_fav, page)
+                    product_card(item, add_to_favorites, remove_from_search_fav, page,
+                                 already_added=already)
                 )
         page.update()
 

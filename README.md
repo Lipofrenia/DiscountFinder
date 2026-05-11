@@ -27,25 +27,33 @@ DiscountFinder/
 CREATE DATABASE discount_db;
 ```
 
-### 2. Создать и активировать venv
+### 2. Создать .env
+Пример оформления в .env.example
+Подставляете свой login, password, name_db
+```powershell
+DATABASE_URL=postgresql://login:password@localhost:5432/name_db
+SECRET_KEY=discount-sleuth-super-secret-key-2024
+```
+
+### 3. Создать и активировать venv
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-### 3. Установить зависимости
+### 4. Установить зависимости
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 4. Запустить бэкенд (из корня проекта)
+### 5. Запустить бэкенд (из корня проекта)
 ```powershell
 uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 > Таблицы создадутся автоматически при первом запуске.  
 > Документация API: http://127.0.0.1:8000/docs
 
-### 5. Запустить фронтенд (в отдельном терминале)
+### 6. Запустить фронтенд (в отдельном терминале)
 ```powershell
 python frontend/app.py
 ```

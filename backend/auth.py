@@ -4,8 +4,14 @@ auth.py — утилиты JWT и хэширования паролей.
 Используем sha256_crypt
 """
 
+import os
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -17,7 +23,7 @@ from backend.database import get_db
 from backend import models
 
 # ── Секрет и алгоритм — в продакшене хранить в .env ──
-SECRET_KEY = "discount-sleuth-super-secret-key-2024"
+SECRET_KEY = os.getenv("SECRET_KEY", "discount-sleuth-super-secret-key-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 часа
 
