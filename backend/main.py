@@ -1,19 +1,14 @@
 """
 main.py — точка входа FastAPI-приложения.
-
-Маршруты:
-  POST /auth/register  — регистрация
-  POST /auth/login     — вход (возвращает JWT)
-  GET  /search         — поиск товаров (мок)
-  GET  /favorites      — список избранного текущего пользователя
-  POST /favorites      — добавить товар в избранное
-  DELETE /favorites/{id} — удалить товар из избранного
 """
 
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
+
+
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
@@ -36,6 +31,10 @@ logger = logging.getLogger(__name__)
 # ── Lifespan: создание таблиц + запуск фонового монитора ──
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Логируем тип цикла событий для отладки на Windows
+    loop = asyncio.get_running_loop()
+    logger.info("Используется цикл событий: %s", type(loop).__name__)
+
     # Создаём таблицы в БД если их ещё нет
     Base.metadata.create_all(bind=engine)
     logger.info("Таблицы БД созданы / проверены")
@@ -118,56 +117,63 @@ def login(
 #  SEARCH
 # ════════════════════════════════════════════════
 
+def normalize_url(url: str) -> str:
+    """Очищает URL от параметров для надежного сравнения."""
+    if not url:
+        return ""
+    return url.split("?")[0].rstrip("/")
+
+
 @app.get("/search", response_model=List[schemas.SearchResult])
-def search(
+async def search(
     q: str = Query(..., min_length=1, description="Поисковый запрос"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Поиск товаров на всех площадках.
-    После получения результатов — обновляет цены и записывает историю
-    для тех товаров из избранного, чей URL совпадает с найденными.
+    При совпадении нормализованного URL — обновляет цену и историю избранного.
     """
-    results = parser.search_all(q)
+    results = await parser.search_all(q)
 
-    # Индекс результатов по URL
-    results_by_url = {r.url: r for r in results}
+    # Индекс результатов по ОЧИЩЕННОМУ URL
+    results_by_norm_url = {normalize_url(r.url): r for r in results}
 
-    # Находим товары в избранном, URL которых есть в результатах поиска
+    # Получаем все избранные товары текущего пользователя
     favorites = (
         db.query(models.Product)
-        .filter(
-            models.Product.user_id == current_user.id,
-            models.Product.url.in_(results_by_url.keys()),
-        )
+        .filter(models.Product.user_id == current_user.id)
         .all()
     )
 
     now = datetime.utcnow()
+    updated_any = False
+
     for product in favorites:
-        new_data = results_by_url[product.url]
-        new_price = new_data.current_price
+        norm_fav_url = normalize_url(product.url)
+        if norm_fav_url in results_by_norm_url:
+            new_data = results_by_norm_url[norm_fav_url]
+            new_price = new_data.current_price
 
-        # Записываем новую цену в историю
-        history_entry = models.PriceHistory(
-            product_id=product.id,
-            price=new_price,
-            checked_at=now,
-        )
-        db.add(history_entry)
+            # Записываем новую цену в историю (даже если не изменилась, для лога проверок)
+            history_entry = models.PriceHistory(
+                product_id=product.id,
+                price=new_price,
+                checked_at=now,
+            )
+            db.add(history_entry)
 
-        # Обновляем текущую цену (старая становится old_price)
-        if product.current_price != new_price:
-            product.old_price = product.current_price
-            product.current_price = new_price
-            product.last_updated = now
+            # Обновляем текущую цену в основной карточке
+            if product.current_price != new_price:
+                product.old_price = product.current_price
+                product.current_price = new_price
+                product.last_updated = now
+            
+            updated_any = True
 
-    if favorites:
+    if updated_any:
         db.commit()
-        logger.info(
-            "[search] Обновлено цен / записана история: %d товаров", len(favorites)
-        )
+        logger.info("[search] Обновлена история цен для товаров пользователя")
 
     return results
 
