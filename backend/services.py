@@ -153,6 +153,7 @@ def _apply_random_price_change():
             logger.info("Монитор: нет товаров для обновления")
             return
 
+        now = datetime.utcnow()
         for product in products:
             change = random.uniform(-0.15, 0.15)        # ±15%
             new_price = round(product.current_price * (1 + change), 2)
@@ -161,10 +162,17 @@ def _apply_random_price_change():
             # Сохраняем старую цену перед обновлением
             product.old_price = product.current_price
             product.current_price = new_price
-            product.last_updated = datetime.utcnow()
+            product.last_updated = now
+
+            # Записываем в историю цен
+            db.add(models.PriceHistory(
+                product_id=product.id,
+                price=new_price,
+                checked_at=now,
+            ))
 
         db.commit()
-        logger.info("Монитор: обновлено %d товаров", len(products))
+        logger.info("Монитор: обновлено %d товаров, история записана", len(products))
     except Exception:
         db.rollback()
         raise

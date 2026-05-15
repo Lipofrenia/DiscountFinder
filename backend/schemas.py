@@ -3,7 +3,7 @@ schemas.py — Pydantic-схемы для валидации запросов и
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 
 
@@ -24,6 +24,16 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# ─────────────────────────── Price History ───────────────────────────
+
+class PriceHistoryOut(BaseModel):
+    id: int
+    price: float
+    checked_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 # ─────────────────────────── Product ───────────────────────────
@@ -48,6 +58,7 @@ class ProductOut(ProductBase):
     id: int
     user_id: int
     last_updated: datetime
+    price_history: List[PriceHistoryOut] = []
 
     model_config = {"from_attributes": True}
 
@@ -64,3 +75,4 @@ class SearchResult(BaseModel):
     marketplace_name: str
     rating: Optional[float] = None
     reviews_count: Optional[int] = None
+

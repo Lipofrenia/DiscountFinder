@@ -13,6 +13,7 @@ main.py — точка входа FastAPI-приложения.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
@@ -120,13 +121,55 @@ def login(
 @app.get("/search", response_model=List[schemas.SearchResult])
 def search(
     q: str = Query(..., min_length=1, description="Поисковый запрос"),
-    _: models.User = Depends(get_current_user),  # требуем авторизацию
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Поиск товаров на всех площадках.
-    Сейчас возвращает моковые данные через ParserService.
+    После получения результатов — обновляет цены и записывает историю
+    для тех товаров из избранного, чей URL совпадает с найденными.
     """
-    return parser.search_all(q)
+    results = parser.search_all(q)
+
+    # Индекс результатов по URL
+    results_by_url = {r.url: r for r in results}
+
+    # Находим товары в избранном, URL которых есть в результатах поиска
+    favorites = (
+        db.query(models.Product)
+        .filter(
+            models.Product.user_id == current_user.id,
+            models.Product.url.in_(results_by_url.keys()),
+        )
+        .all()
+    )
+
+    now = datetime.utcnow()
+    for product in favorites:
+        new_data = results_by_url[product.url]
+        new_price = new_data.current_price
+
+        # Записываем новую цену в историю
+        history_entry = models.PriceHistory(
+            product_id=product.id,
+            price=new_price,
+            checked_at=now,
+        )
+        db.add(history_entry)
+
+        # Обновляем текущую цену (старая становится old_price)
+        if product.current_price != new_price:
+            product.old_price = product.current_price
+            product.current_price = new_price
+            product.last_updated = now
+
+    if favorites:
+        db.commit()
+        logger.info(
+            "[search] Обновлено цен / записана история: %d товаров", len(favorites)
+        )
+
+    return results
 
 
 # ════════════════════════════════════════════════
@@ -161,6 +204,15 @@ def add_favorite(
         raise HTTPException(status_code=409, detail="Товар уже в избранном")
     product = models.Product(**body.model_dump(), user_id=current_user.id)
     db.add(product)
+    db.flush()  # получаем id без commit
+
+    # Записываем начальную цену в историю
+    db.add(models.PriceHistory(
+        product_id=product.id,
+        price=body.current_price,
+        checked_at=datetime.utcnow(),
+    ))
+
     db.commit()
     db.refresh(product)
     return product

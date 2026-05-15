@@ -1,6 +1,6 @@
 """
 models.py — ORM-модели SQLAlchemy.
-Таблицы: users, products.
+Таблицы: users, products, price_history.
 """
 
 from datetime import datetime
@@ -47,3 +47,25 @@ class Product(Base):
     )
 
     owner: Mapped["User"] = relationship("User", back_populates="products")
+    price_history: Mapped[list["PriceHistory"]] = relationship(
+        "PriceHistory", back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="PriceHistory.checked_at",
+    )
+
+
+class PriceHistory(Base):
+    """Запись об изменении цены товара."""
+    __tablename__ = "price_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    product_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+
+    product: Mapped["Product"] = relationship("Product", back_populates="price_history")
+
