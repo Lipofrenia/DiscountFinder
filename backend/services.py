@@ -1,6 +1,4 @@
-"""
-services.py — логика парсинга и мониторинга цен.
-"""
+
 
 import random
 import asyncio
@@ -20,7 +18,6 @@ from backend.schemas import SearchResult
 logger = logging.getLogger(__name__)
 
 def _clean_price(price_str: str) -> float:
-    """Очищает строку цены и конвертирует в float."""
     if not price_str:
         return 0.0
     cleaned = "".join(c for c in price_str if c.isdigit() or c in ".,")
@@ -30,13 +27,8 @@ def _clean_price(price_str: str) -> float:
     except ValueError:
         return 0.0
 
-# ─────────────── Parser Service ───────────────
 
 class ParserService:
-    """
-    Сервис поиска товаров.
-    Использует вызов парсера в отдельном процессе для обхода ограничений Windows.
-    """
 
     async def search_wildberries(self, query: str) -> List[SearchResult]:
         return []
@@ -45,15 +37,12 @@ class ParserService:
         return []
 
     async def search_yandex(self, query: str) -> List[SearchResult]:
-        """Запуск парсера в отдельном процессе."""
         logger.info("[Ya] Запуск процесса парсинга для: %s", query)
         
-        # Запускаем как модуль через -m, чтобы пути внутри проекта работали правильно
         cmd = [sys.executable, "-m", "backend.parsers", query]
         
         try:
             def run_proc():
-                # Запускаем и ловим и stdout (результат), и stderr (ошибки)
                 result = subprocess.run(
                     cmd, 
                     capture_output=True, 
@@ -71,7 +60,7 @@ class ParserService:
                 logger.warning("[Ya] Парсер вернул пустой ответ (stdout пуст)")
                 return []
 
-            # Ищем начало JSON (на случай если там есть лишний текст)
+
             start_idx = output.find("[")
             if start_idx == -1:
                 logger.error("[Ya] Не удалось найти начало JSON в ответе: %s", output)
@@ -99,7 +88,6 @@ class ParserService:
             return []
 
     async def search_all(self, query: str) -> List[SearchResult]:
-        """Агрегирует результаты со всех площадок."""
         tasks = [
             self.search_wildberries(query),
             self.search_ozon(query),
@@ -109,10 +97,9 @@ class ParserService:
         return [item for sublist in all_results for item in sublist]
 
 
-# ─────────────── Мониторинг цен ───────────────
 
 async def price_monitor_loop():
-    INTERVAL = 30 * 60  # 30 минут
+    INTERVAL = 30 * 60
     logger.info("Монитор цен запущен")
     while True:
         await asyncio.sleep(INTERVAL)

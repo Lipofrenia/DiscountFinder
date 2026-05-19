@@ -1,14 +1,8 @@
-"""
-main.py — точка входа FastAPI-приложения.
-"""
 
 import asyncio
 import logging
-import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
-
-
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
@@ -28,22 +22,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger(__name__)
 
 
-# ── Lifespan: создание таблиц + запуск фонового монитора ──
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Логируем тип цикла событий для отладки на Windows
     loop = asyncio.get_running_loop()
     logger.info("Используется цикл событий: %s", type(loop).__name__)
 
-    # Создаём таблицы в БД если их ещё нет
     Base.metadata.create_all(bind=engine)
     logger.info("Таблицы БД созданы / проверены")
 
-    # Запускаем фоновый монитор цен
     monitor_task = asyncio.create_task(price_monitor_loop())
     logger.info("Фоновый монитор цен запущен")
 
-    yield  # приложение работает
+    yield
 
     monitor_task.cancel()
     try:
@@ -59,7 +49,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — разрешаем Flet-клиенту (localhost) обращаться к API
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -71,13 +61,10 @@ app.add_middleware(
 parser = ParserService()
 
 
-# ════════════════════════════════════════════════
-#  AUTH
-# ════════════════════════════════════════════════
+# --- AUTH ---
 
 @app.post("/auth/register", response_model=schemas.UserOut, status_code=201)
 def register(body: schemas.UserCreate, db: Session = Depends(get_db)):
-    """Регистрация нового пользователя."""
     if db.query(models.User).filter(models.User.email == body.email).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -98,11 +85,6 @@ def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """
-    Вход пользователя.
-    Принимает form-data: username (= email) + password.
-    Возвращает JWT-токен.
-    """
     user = db.query(models.User).filter(models.User.email == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(
@@ -113,12 +95,9 @@ def login(
     return {"access_token": token, "token_type": "bearer"}
 
 
-# ════════════════════════════════════════════════
-#  SEARCH
-# ════════════════════════════════════════════════
+# --- SEARCH ---
 
 def normalize_url(url: str) -> str:
-    """Очищает URL от параметров для надежного сравнения."""
     if not url:
         return ""
     return url.split("?")[0].rstrip("/")
@@ -130,16 +109,12 @@ async def search(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Поиск товаров на всех площадках.
-    При совпадении нормализованного URL — обновляет цену и историю избранного.
-    """
     results = await parser.search_all(q)
 
-    # Индекс результатов по ОЧИЩЕННОМУ URL
+
     results_by_norm_url = {normalize_url(r.url): r for r in results}
 
-    # Получаем все избранные товары текущего пользователя
+
     favorites = (
         db.query(models.Product)
         .filter(models.Product.user_id == current_user.id)
@@ -155,7 +130,7 @@ async def search(
             new_data = results_by_norm_url[norm_fav_url]
             new_price = new_data.current_price
 
-            # Записываем новую цену в историю (даже если не изменилась, для лога проверок)
+
             history_entry = models.PriceHistory(
                 product_id=product.id,
                 price=new_price,
@@ -163,7 +138,7 @@ async def search(
             )
             db.add(history_entry)
 
-            # Обновляем текущую цену в основной карточке
+
             if product.current_price != new_price:
                 product.old_price = product.current_price
                 product.current_price = new_price
@@ -178,16 +153,13 @@ async def search(
     return results
 
 
-# ════════════════════════════════════════════════
-#  FAVORITES (CRUD)
-# ════════════════════════════════════════════════
+# --- FAVORITES ---
 
 @app.get("/favorites", response_model=List[schemas.ProductOut])
 def get_favorites(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Список избранных товаров текущего пользователя."""
     return (
         db.query(models.Product)
         .filter(models.Product.user_id == current_user.id)
@@ -201,7 +173,6 @@ def add_favorite(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Добавить товар в избранное. 409 если уже добавлен (по URL)."""
     existing = db.query(models.Product).filter(
         models.Product.user_id == current_user.id,
         models.Product.url == body.url,
@@ -210,9 +181,8 @@ def add_favorite(
         raise HTTPException(status_code=409, detail="Товар уже в избранном")
     product = models.Product(**body.model_dump(), user_id=current_user.id)
     db.add(product)
-    db.flush()  # получаем id без commit
+    db.flush()
 
-    # Записываем начальную цену в историю
     db.add(models.PriceHistory(
         product_id=product.id,
         price=body.current_price,
@@ -230,7 +200,6 @@ def delete_favorite(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Удалить товар из избранного по ID."""
     product = (
         db.query(models.Product)
         .filter(

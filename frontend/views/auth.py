@@ -8,7 +8,7 @@ def get_auth_view(page: ft.Page, token_ref: dict):
     email_field    = make_text_field("Email")
     password_field = make_text_field("Пароль", password=True)
     auth_error     = ft.Text("", color=RED, size=13)
-    auth_mode      = {"reg": False}   # False = вход, True = регистрация
+    auth_mode      = {"reg": False}
 
     def validate_form(email: str, pwd: str) -> str | None:
         if not email or not pwd:
@@ -54,7 +54,6 @@ def get_auth_view(page: ft.Page, token_ref: dict):
                 page.update()
                 return
 
-        # ── Вход ──
         resp = api(
             "POST", "/auth/login",
             data={"username": email, "password": pwd},

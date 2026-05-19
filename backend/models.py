@@ -1,7 +1,4 @@
-"""
-models.py — ORM-модели SQLAlchemy.
-Таблицы: users, products, price_history.
-"""
+
 
 from datetime import datetime
 from sqlalchemy import (
@@ -12,21 +9,19 @@ from backend.database import Base
 
 
 class User(Base):
-    """Пользователь системы."""
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Связь «один ко многим» с Product
+
     products: Mapped[list["Product"]] = relationship(
         "Product", back_populates="owner", cascade="all, delete-orphan"
     )
 
 
 class Product(Base):
-    """Товар в «Избранном» конкретного пользователя."""
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -38,9 +33,8 @@ class Product(Base):
     old_price: Mapped[float] = mapped_column(Float, nullable=True)
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     image_url: Mapped[str] = mapped_column(String(1000), nullable=True)
-    rating: Mapped[float] = mapped_column(Float, nullable=True)          # 0.0–5.0
-    reviews_count: Mapped[int] = mapped_column(Integer, nullable=True)   # кол-во отзывов
-    # WB / Ozon / Ya
+    rating: Mapped[float] = mapped_column(Float, nullable=True)
+    reviews_count: Mapped[int] = mapped_column(Integer, nullable=True)
     marketplace_name: Mapped[str] = mapped_column(String(50), nullable=False, default="WB")
     last_updated: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -55,7 +49,6 @@ class Product(Base):
 
 
 class PriceHistory(Base):
-    """Запись об изменении цены товара."""
     __tablename__ = "price_history"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

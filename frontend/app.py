@@ -1,17 +1,10 @@
-"""
-app.py — Flet-интерфейс «Скидочный сыщик».
-Модульная версия.
 
-Запуск:  python frontend/app.py
-"""
 
 import flet as ft
 import threading
 import sys
 import os
 
-# Добавляем текущую директорию в path, чтобы работали импорты core, components, views
-# если запуск идет из корня проекта: python frontend/app.py
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.constants import BG_COLOR, SURFACE_COLOR, RED, GREEN
@@ -31,7 +24,7 @@ def main(page: ft.Page):
     }
     page.theme = ft.Theme(font_family="Inter")
 
-    # ── Состояние приложения ──
+
     token_ref = {"value": None}
     snack_ref = ft.SnackBar(content=ft.Text(""), bgcolor=SURFACE_COLOR)
     page.overlay.append(snack_ref)
@@ -48,10 +41,9 @@ def main(page: ft.Page):
             home_view.clear_data()
         page.go("/")
 
-    # ── Инициализация вьюх ──
+
     auth_view = get_auth_view(page, token_ref)
     home_view = get_home_view(page, token_ref, show_snack, logout)
-    # favorites_view создадим позже или тоже сразу, но ему нужно обновление при входе
     fav_view = get_favorites_view(page, token_ref, show_snack)
 
     def route_change(e: ft.RouteChangeEvent):
@@ -60,8 +52,8 @@ def main(page: ft.Page):
         if page.route == "/home":
             page.views.append(home_view)
         elif page.route == "/favorites":
+            fav_view = get_favorites_view(page, token_ref, show_snack)
             page.views.append(fav_view)
-            # Загружаем данные при переходе на страницу
             if hasattr(fav_view, "load_data"):
                 threading.Thread(target=fav_view.load_data, daemon=True).start()
         else:

@@ -7,19 +7,17 @@ from components.common import star_row
 
 def product_card(item: dict, on_favorite, on_cancel, page: ft.Page,
                  already_added: bool = False, fav_id: int = None) -> ft.Container:
-    """Карточка товара: изображение, название, цена, кнопка избранного."""
     pct = discount_pct(item["current_price"], item.get("old_price", 0))
     has_discount = pct > 0
     marketplace_colors = {"WB": "#CB11AB", "Ozon": "#005BFF", "Ya": "#FFCC00"}
     mp_color = marketplace_colors.get(item.get("marketplace_name", "WB"), ACCENT)
     
-    # Скрываем кол-во отзывов (передаем 0)
     rating_widget = star_row(item["rating"], 0) if item.get("rating") else None
 
     saved_id: dict = {"value": fav_id}
     is_added: dict = {"value": already_added}
 
-    # ── Кнопка «В избранное» ──
+
     fav_btn = ft.ElevatedButton(
         text="В избранном ✓" if already_added else "В избранное",
         icon=ft.icons.STAR if already_added else ft.icons.STAR_OUTLINE,
@@ -93,7 +91,7 @@ def product_card(item: dict, on_favorite, on_cancel, page: ft.Page,
         spacing=0, tight=True,
         expand=True,
         controls=[
-            # ── Изображение ──
+
             ft.Container(
                 height=280,
                 content=ft.Stack(
@@ -114,7 +112,7 @@ def product_card(item: dict, on_favorite, on_cancel, page: ft.Page,
                     ],
                 ),
             ),
-            # ── Текстовая часть + Кнопка ──
+
             ft.Container(
                 padding=ft.padding.all(14),
                 expand=True,

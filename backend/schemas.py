@@ -1,13 +1,11 @@
-"""
-schemas.py — Pydantic-схемы для валидации запросов и ответов API.
-"""
+
 
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 
 
-# ─────────────────────────── Auth ───────────────────────────
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -26,7 +24,7 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-# ─────────────────────────── Price History ───────────────────────────
+
 
 class PriceHistoryOut(BaseModel):
     id: int
@@ -36,7 +34,7 @@ class PriceHistoryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ─────────────────────────── Product ───────────────────────────
+
 
 class ProductBase(BaseModel):
     title: str
@@ -50,7 +48,6 @@ class ProductBase(BaseModel):
 
 
 class ProductCreate(ProductBase):
-    """Схема для добавления товара в избранное."""
     pass
 
 
@@ -63,10 +60,9 @@ class ProductOut(ProductBase):
     model_config = {"from_attributes": True}
 
 
-# ─────────────────────────── Search result ───────────────────────────
+
 
 class SearchResult(BaseModel):
-    """Один результат поиска (не сохранённый в БД)."""
     title: str
     current_price: float
     old_price: Optional[float] = None

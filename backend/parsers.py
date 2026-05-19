@@ -1,12 +1,8 @@
-import asyncio
 import json
-import logging
 import sys
 import os
-from datetime import datetime
-from typing import List
 
-# Добавляем корень проекта в sys.path, чтобы импорты типа 'from backend...' работали
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 if project_root not in sys.path:
@@ -14,35 +10,14 @@ if project_root not in sys.path:
 
 from playwright.sync_api import sync_playwright
 
-try:
-    from backend.schemas import SearchResult
-except ImportError:
-    # На случай если всё же не подхватилось при прямом запуске
-    SearchResult = None 
-
-# Фикс для Windows (для работы как самостоятельный скрипт)
-if sys.platform == 'win32':
-    try:
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    except:
-        pass
-
-logger = logging.getLogger(__name__)
-
 def search_yandex_market_standalone(query: str):
-    """
-    Ваш рабочий код 1-в-1. 
-    Запускается в отдельном процессе для обхода ограничений Windows.
-    """
     if not query:
         return []
 
     results = []
-    timestamp = datetime.now().isoformat()
 
     try:
         with sync_playwright() as p:
-            # headless=False для видимости
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
                 viewport={"width": 1920, "height": 1080},
@@ -51,13 +26,12 @@ def search_yandex_market_standalone(query: str):
             )
             page = context.new_page()
 
-            # Ищем
             url = f"https://market.yandex.ru/search?text={query.replace(' ', '%20')}"
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
             
-            page.wait_for_timeout(4000)  # даём загрузиться
+            page.wait_for_timeout(4000)
 
-            # Скроллим
+
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
             page.wait_for_timeout(2000)
 
@@ -100,20 +74,16 @@ def search_yandex_market_standalone(query: str):
 
             browser.close()
     except Exception as exc:
-        # В режиме скрипта выводим ошибку в stderr
         sys.stderr.write(f"Error: {exc}\n")
 
     return results
 
 if __name__ == "__main__":
-    # Если запущен как скрипт: python -m backend.parsers "запрос"
     if len(sys.argv) > 1:
-        # Принудительно устанавливаем UTF-8 для stdout на Windows, 
-        # чтобы избежать UnicodeEncodeError при печати спецсимволов
+        # UTF-8 для Windows, иначе UnicodeEncodeError на кириллице
         if sys.platform == 'win32':
             sys.stdout.reconfigure(encoding='utf-8')
             
         search_query = sys.argv[1]
         results_list = search_yandex_market_standalone(search_query)
-        # Выводим только JSON в stdout для перехвата
         print(json.dumps(results_list, ensure_ascii=False))

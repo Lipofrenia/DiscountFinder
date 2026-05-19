@@ -5,17 +5,16 @@ from core.constants import (
 from components.common import star_row
 
 def favorite_card(item: dict, on_delete, page: ft.Page) -> ft.Container:
-    """Карточка товара в разделе «Мой список»."""
     current_price = item["current_price"]
     history = item.get("price_history") or []
     expanded: dict = {"value": False}
 
-    # ── Итоговое изменение (первая цена из истории → текущая) ──
+
     first_price = history[0]["price"] if history else None
     total_diff  = (current_price - first_price) if first_price and first_price != current_price else None
     total_pct   = int(total_diff / first_price * 100) if (total_diff and first_price) else None
 
-    # ── Блок цены ──
+
     price_color = (
         GREEN if (total_diff is not None and total_diff < 0)
         else (RED if (total_diff is not None and total_diff > 0) else TEXT_PRIMARY)
@@ -47,10 +46,10 @@ def favorite_card(item: dict, on_delete, page: ft.Page) -> ft.Container:
         controls=price_controls,
     )
 
-    # ── Стрелочка ──
+
     arrow_icon = ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN, color=TEXT_SECONDARY, size=20)
 
-    # ── Строки истории цен с трендом ──
+
     def make_history_row(record: dict, prev_price):
         price_val = record.get("price", 0)
         date_str  = (record.get("checked_at") or "")[:10]

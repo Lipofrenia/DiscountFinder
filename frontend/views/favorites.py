@@ -96,6 +96,5 @@ def get_favorites_view(page: ft.Page, token_ref: dict, show_snack):
         ],
     )
     
-    # Store load_favorites on the view object so app.py can trigger it
     view.load_data = load_favorites
     return view

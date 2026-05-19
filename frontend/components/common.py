@@ -2,7 +2,6 @@ import flet as ft
 from core.constants import BORDER_COLOR, ACCENT, SURFACE_COLOR, TEXT_SECONDARY, TEXT_PRIMARY, GOLD
 
 def make_text_field(label: str, password: bool = False, ref=None) -> ft.TextField:
-    """Стилизованное текстовое поле."""
     return ft.TextField(
         ref=ref,
         label=label,
@@ -20,7 +19,6 @@ def make_text_field(label: str, password: bool = False, ref=None) -> ft.TextFiel
 
 
 def make_button(text: str, on_click, primary: bool = True, icon=None) -> ft.ElevatedButton:
-    """Кнопка с акцентным или второстепенным стилем."""
     return ft.ElevatedButton(
         text=text,
         icon=icon,
@@ -28,7 +26,7 @@ def make_button(text: str, on_click, primary: bool = True, icon=None) -> ft.Elev
         style=ft.ButtonStyle(
             bgcolor=ACCENT if primary else SURFACE_COLOR,
             color=TEXT_PRIMARY,
-            overlay_color="#267C3AED",  # ~15% opacity accent
+            overlay_color="#267C3AED",
             shape=ft.RoundedRectangleBorder(radius=10),
             padding=ft.padding.symmetric(horizontal=24, vertical=14),
         ),
@@ -36,7 +34,6 @@ def make_button(text: str, on_click, primary: bool = True, icon=None) -> ft.Elev
 
 
 def star_row(rating: float, reviews: int) -> ft.Row:
-    """Строка со звёздами и кол-вом отзывов."""
     stars = []
     for i in range(1, 6):
         color = GOLD if rating >= (i - 0.25) else ("#88F59E0B" if rating >= (i - 0.75) else BORDER_COLOR)
