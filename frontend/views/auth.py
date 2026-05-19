@@ -77,10 +77,10 @@ def get_auth_view(page: ft.Page, token_ref: dict):
         auth_mode["reg"] = not auth_mode["reg"]
         if auth_mode["reg"]:
             auth_btn.text = "Зарегистрироваться"
-            toggle_mode_text.value = "Уже есть аккаунт? Войти"
+            toggle_mode_text.text = "Уже есть аккаунт? Войти"
         else:
             auth_btn.text = "Войти"
-            toggle_mode_text.value = "Нет аккаунта? Зарегистрироваться"
+            toggle_mode_text.text = "Нет аккаунта? Зарегистрироваться"
         auth_error.value = ""
         page.update()
 
